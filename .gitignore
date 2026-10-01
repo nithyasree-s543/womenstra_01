@@ -36,3 +36,12 @@ env/
 uploads/
 coverage/
 .system_generated/
+recordings/
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+server/src/db/womentra.db
+server/src/db/db.json

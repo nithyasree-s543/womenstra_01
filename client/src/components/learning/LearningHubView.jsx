@@ -75,8 +75,8 @@ export const LearningHubView = () => {
 
     try {
       const [detailsRes, progRes] = await Promise.all([
-        fetch(`/api/courses/${course.id}?lang=${chosenLang}`).then(r => r.json()),
-        fetch(`/api/courses/${course.id}/progress?userId=${user?.id || 'user-1'}`).then(r => r.json())
+        api.getCourseDetails(course.id, chosenLang),
+        api.getUserCourseProgress(course.id, user?.id || 'user-1')
       ]);
 
       if (detailsRes.success) setCourseDetails(detailsRes.course);
@@ -171,17 +171,13 @@ export const LearningHubView = () => {
     setAssessmentScore(score);
 
     try {
-      const res = await fetch('/api/courses/final-assessment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id || 'user-1',
-          courseId: selectedCourse.id,
-          userName: user?.name || 'Sunita Devi',
-          scorePct: score,
-          language: courseLanguage.toUpperCase()
-        })
-      }).then(r => r.json());
+      const res = await api.submitFinalAssessment({
+        userId: user?.id || 'user-1',
+        courseId: selectedCourse.id,
+        userName: user?.name || 'Sunita Devi',
+        scorePct: score,
+        language: courseLanguage.toUpperCase()
+      });
 
       if (res.success) {
         setGeneratedCertificate(res.certificate);

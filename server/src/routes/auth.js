@@ -7,11 +7,12 @@ import { userTable } from '../db/userTable.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'womentra_secure_dev_jwt_secret_2026';
 const BCRYPT_ROUNDS = 10;
+const isProduction = process.env.NODE_ENV === 'production';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'lax',
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  secure: process.env.NODE_ENV === 'production'
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
 };
 
 // Store OTPs temporarily in memory (keyed by phone)
@@ -290,8 +291,8 @@ router.get('/me', async (req, res) => {
 router.post('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax'
   });
   return res.json({ success: true, message: 'Logged out successfully.' });
 });

@@ -1,6 +1,7 @@
 // Frontend API service layer connecting to Womentra Node.js/Express backend
 
-const API_BASE = '/api';
+const RAW_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const API_BASE = `${RAW_API_URL.replace(/\/+$/, '')}/api`;
 
 export const api = {
   // Auth
@@ -90,18 +91,23 @@ export const api = {
     const params = new URLSearchParams();
     if (category && category !== 'all') params.append('category', category);
     if (search) params.append('search', search);
-    const res = await fetch(`${API_BASE}/schemes?${params.toString()}`);
+    const res = await fetch(`${API_BASE}/schemes?${params.toString()}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   getSchemeById: async (id) => {
-    const res = await fetch(`${API_BASE}/schemes/${id}`);
+    const res = await fetch(`${API_BASE}/schemes/${id}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   checkEligibility: async (formData) => {
     const res = await fetch(`${API_BASE}/schemes/check-eligibility`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     });
@@ -111,6 +117,7 @@ export const api = {
   applyScheme: async (appData) => {
     const res = await fetch(`${API_BASE}/schemes/apply`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appData)
     });
@@ -118,30 +125,53 @@ export const api = {
   },
 
   getMyApplications: async (userId) => {
-    const res = await fetch(`${API_BASE}/schemes/my-applications?userId=${userId || 'user-1'}`);
+    const res = await fetch(`${API_BASE}/schemes/my-applications?userId=${userId || 'user-1'}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   getCSCCenters: async () => {
-    const res = await fetch(`${API_BASE}/schemes/csc/locations`);
+    const res = await fetch(`${API_BASE}/schemes/csc/locations`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   // Courses & Learning
   getCourses: async (category = 'all') => {
     const params = category !== 'all' ? `?category=${category}` : '';
-    const res = await fetch(`${API_BASE}/courses${params}`);
+    const res = await fetch(`${API_BASE}/courses${params}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   getCourseById: async (id) => {
-    const res = await fetch(`${API_BASE}/courses/${id}`);
+    const res = await fetch(`${API_BASE}/courses/${id}`, {
+      credentials: 'include'
+    });
+    return res.json();
+  },
+
+  getCourseDetails: async (id, lang = 'en') => {
+    const res = await fetch(`${API_BASE}/courses/${id}?lang=${lang}`, {
+      credentials: 'include'
+    });
+    return res.json();
+  },
+
+  getUserCourseProgress: async (courseId, userId = 'user-1') => {
+    const res = await fetch(`${API_BASE}/courses/${courseId}/progress?userId=${userId}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   recordProgress: async (data) => {
     const res = await fetch(`${API_BASE}/courses/progress`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
@@ -151,8 +181,19 @@ export const api = {
   submitQuiz: async (quizData) => {
     const res = await fetch(`${API_BASE}/courses/quiz-submit`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(quizData)
+    });
+    return res.json();
+  },
+
+  submitFinalAssessment: async (assessmentData) => {
+    const res = await fetch(`${API_BASE}/courses/final-assessment`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(assessmentData)
     });
     return res.json();
   },
@@ -162,18 +203,23 @@ export const api = {
     const params = new URLSearchParams();
     if (language) params.append('language', language);
     if (skill) params.append('skill', skill);
-    const res = await fetch(`${API_BASE}/mentors?${params.toString()}`);
+    const res = await fetch(`${API_BASE}/mentors?${params.toString()}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   getMyMentor: async (userId) => {
-    const res = await fetch(`${API_BASE}/mentors/my-mentor?userId=${userId || 'user-1'}`);
+    const res = await fetch(`${API_BASE}/mentors/my-mentor?userId=${userId || 'user-1'}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   assignMentor: async (userId, mentorId) => {
     const res = await fetch(`${API_BASE}/mentors/assign`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, mentorId })
     });
@@ -183,6 +229,7 @@ export const api = {
   rateMentor: async (rateData) => {
     const res = await fetch(`${API_BASE}/mentors/rate`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rateData)
     });
@@ -192,6 +239,7 @@ export const api = {
   bookSession: async (bookData) => {
     const res = await fetch(`${API_BASE}/mentors/book-session`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookData)
     });
@@ -201,6 +249,7 @@ export const api = {
   registerTutor: async (tutorData) => {
     const res = await fetch(`${API_BASE}/mentors/register-tutor`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tutorData)
     });
@@ -210,13 +259,16 @@ export const api = {
   // Community
   getCommunityPosts: async (category = 'all') => {
     const params = category !== 'all' ? `?category=${category}` : '';
-    const res = await fetch(`${API_BASE}/community/posts${params}`);
+    const res = await fetch(`${API_BASE}/community/posts${params}`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   createPost: async (postData) => {
     const res = await fetch(`${API_BASE}/community/posts`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(postData)
     });
@@ -224,13 +276,17 @@ export const api = {
   },
 
   likePost: async (id) => {
-    const res = await fetch(`${API_BASE}/community/posts/${id}/like`, { method: 'POST' });
+    const res = await fetch(`${API_BASE}/community/posts/${id}/like`, {
+      method: 'POST',
+      credentials: 'include'
+    });
     return res.json();
   },
 
   reportPost: async (id, reason) => {
     const res = await fetch(`${API_BASE}/community/posts/${id}/report`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason })
     });
@@ -241,6 +297,7 @@ export const api = {
   askDidi: async (prompt, language = 'hi', userContext = {}) => {
     const res = await fetch(`${API_BASE}/ai/didi-voice-assist`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, language, userContext })
     });
@@ -249,13 +306,16 @@ export const api = {
 
   // Payments & Packages
   getPackages: async () => {
-    const res = await fetch(`${API_BASE}/payments/packages`);
+    const res = await fetch(`${API_BASE}/payments/packages`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   createPaymentOrder: async (packageId, userId) => {
     const res = await fetch(`${API_BASE}/payments/create-order`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ packageId, userId })
     });
@@ -265,6 +325,7 @@ export const api = {
   verifyPayment: async (payData) => {
     const res = await fetch(`${API_BASE}/payments/verify`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payData)
     });
@@ -274,6 +335,7 @@ export const api = {
   redeemSponsorCode: async (code, userId) => {
     const res = await fetch(`${API_BASE}/payments/redeem-sponsor-code`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, userId })
     });
@@ -282,13 +344,17 @@ export const api = {
 
   // Daily Affirmations & Stories
   getDailyAffirmation: async () => {
-    const res = await fetch(`${API_BASE}/daily-affirmation`);
+    const res = await fetch(`${API_BASE}/daily-affirmation`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   // Live Tutoring Rooms
   getLiveSessions: async () => {
-    const res = await fetch(`${API_BASE}/live-sessions`);
+    const res = await fetch(`${API_BASE}/live-sessions`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
@@ -296,6 +362,7 @@ export const api = {
   shareLocation: async (locData) => {
     const res = await fetch(`${API_BASE}/tracking/share-location`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(locData)
     });
@@ -303,26 +370,50 @@ export const api = {
   },
 
   getActiveShares: async () => {
-    const res = await fetch(`${API_BASE}/tracking/active-shares`);
+    const res = await fetch(`${API_BASE}/tracking/active-shares`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   // Admin
   getAdminOverview: async () => {
-    const res = await fetch(`${API_BASE}/admin/overview`);
+    const res = await fetch(`${API_BASE}/admin/overview`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   getPendingKyc: async () => {
-    const res = await fetch(`${API_BASE}/admin/pending-kyc`);
+    const res = await fetch(`${API_BASE}/admin/pending-kyc`, {
+      credentials: 'include'
+    });
     return res.json();
   },
 
   approveKyc: async (id, status, notes) => {
     const res = await fetch(`${API_BASE}/admin/approve-kyc/${id}`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, adminNotes: notes })
+    });
+    return res.json();
+  },
+
+  getMentorRatings: async () => {
+    const res = await fetch(`${API_BASE}/admin/mentor-ratings`, {
+      credentials: 'include'
+    });
+    return res.json();
+  },
+
+  createScheme: async (schemeData) => {
+    const res = await fetch(`${API_BASE}/admin/schemes`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(schemeData)
     });
     return res.json();
   }

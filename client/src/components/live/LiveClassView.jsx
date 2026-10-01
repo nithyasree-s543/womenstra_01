@@ -485,7 +485,11 @@ export const LiveClassView = ({ onLeave }) => {
   useEffect(() => {
     narrateScreen(t('liveClass'));
 
-    const socket = io('/', { transports: ['websocket', 'polling'] });
+    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true
+    });
     socketRef.current = socket;
 
     socket.emit('register-user', {

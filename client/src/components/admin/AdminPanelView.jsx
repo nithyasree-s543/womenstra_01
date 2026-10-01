@@ -33,7 +33,7 @@ export const AdminPanelView = () => {
       const [overviewRes, kycRes, ratingsRes] = await Promise.all([
         api.getAdminOverview(),
         api.getPendingKyc(),
-        fetch('/api/admin/mentor-ratings').then(r => r.json())
+        api.getMentorRatings()
       ]);
       if (overviewRes.success) setStats(overviewRes.stats);
       if (kycRes.success) setPendingTutors(kycRes.pendingTutors);
@@ -56,11 +56,7 @@ export const AdminPanelView = () => {
   const handleCreateScheme = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/schemes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newScheme)
-      }).then(r => r.json());
+      const res = await api.createScheme(newScheme);
 
       if (res.success) {
         setSchemeAddedMsg(`✓ नई योजना "${newScheme.titleHi}" सफलतापूर्वक जोड़ी गई!`);

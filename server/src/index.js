@@ -23,11 +23,25 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy (Render, Vercel, Nginx, Cloudflare)
+app.set('trust proxy', 1);
+
+// Parse allowed client origins (comma-separated in CLIENT_URL, fallback to localhost)
+const parseClientOrigins = () => {
+  const raw = process.env.CLIENT_URL;
+  if (!raw) return ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:3000'];
+  const origins = raw.split(',').map(o => o.trim()).filter(Boolean);
+  return origins.length > 0 ? origins : ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:3000'];
+};
+
+const allowedOrigins = parseClientOrigins();
+
 // Initialize Socket.IO with CORS for WebRTC signaling
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true
   }
 });
 
@@ -201,15 +215,12 @@ io.on('connection', (socket) => {
   });
 });
 
-// Security & Middleware
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-
-// Helmet: secure HTTP headers (disable CSP in dev so Vite HMR works)
+// Helmet: secure HTTP headers (disable CSP in dev so Vite HMR / WebRTC works)
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// CORS: restricted to client URL
+// CORS: restricted to allowed client URLs with credentials support
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
