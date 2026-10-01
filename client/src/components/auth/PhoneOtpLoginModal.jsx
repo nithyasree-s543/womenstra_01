@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
-import { X, Phone, KeyRound, Sparkles, Volume2, ShieldCheck, HeartHandshake, ArrowRight, UserCheck } from 'lucide-react';
+import { 
+  X, Phone, KeyRound, Sparkles, Volume2, ShieldCheck, 
+  HeartHandshake, ArrowRight, UserCheck, UserPlus, LogIn, Globe 
+} from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useVoiceNarrator } from '../../context/VoiceNarratorContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import confetti from 'canvas-confetti';
 
-export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
-  const { currentLang, t } = useLanguage();
+export const PhoneOtpLoginModal = ({ isOpen, onClose }) => {
+  const { currentLang, languages, changeLanguage, t } = useLanguage();
   const { speak } = useVoiceNarrator();
   const { loginWithPhoneOtp } = useAuth();
 
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
+  
+  // Registration & Login Fields
   const [phone, setPhone] = useState('9876543210');
   const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
+  const [village, setVillage] = useState('Ramnagar, UP');
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLang);
+  const [hasGuardian, setHasGuardian] = useState(false);
+  const [guardianName, setGuardianName] = useState('');
   const [demoOtpCode, setDemoOtpCode] = useState('');
-  const [isFamilyMode, setIsFamilyMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -24,23 +34,31 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     if (!phone || phone.length < 10) {
-      setErrorMsg('कृपया 10 अंकों का मोबाइल नंबर डालें');
-      speak('कृपया 10 अंकों का मोबाइल नंबर डालें');
+      const err = 'Please enter a valid 10-digit mobile number';
+      setErrorMsg(err);
+      speak(err);
+      return;
+    }
+
+    if (mode === 'register' && !name.trim()) {
+      const err = 'Please enter your name';
+      setErrorMsg(err);
+      speak(err);
       return;
     }
 
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.sendOtp(phone, currentLang);
+      const res = await api.sendOtp(phone, selectedLanguage);
       if (res.success) {
         setDemoOtpCode(res.demoOtp || '123456');
         setOtp(res.demoOtp || '123456');
         setStep('otp');
-        speak(res.voicePrompt || 'ओटीपी आपके नंबर पर भेजा गया है। डेमो ओटीपी 1 2 3 4 5 6 है।');
+        speak(res.voicePrompt || `OTP sent to your number. Demo code is 1 2 3 4 5 6.`);
       }
     } catch {
-      setErrorMsg('Network error. Try again.');
+      setErrorMsg('Network issue. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +67,7 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     if (!otp) {
-      setErrorMsg('कृपया 6 अंकों का ओटीपी भरें');
+      setErrorMsg('Please enter the 6-digit OTP');
       return;
     }
 
@@ -59,13 +77,15 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
       const res = await loginWithPhoneOtp({
         phone,
         otp,
-        name: name || 'Sunita Devi',
-        village: 'Ramnagar',
-        language: currentLang
+        name: name || (mode === 'register' ? 'Learner Sister' : 'Sunita Devi'),
+        village: village || 'Gramin',
+        language: selectedLanguage
       });
 
       if (res.success) {
-        speak(`नमस्ते ${res.user.name}! वोमंतरा में आपका स्वागत है।`);
+        changeLanguage(selectedLanguage, false);
+        confetti({ particleCount: 70, spread: 60 });
+        speak(`${t('welcome')} ${res.user.name}`);
         onClose();
       } else {
         setErrorMsg(res.message);
@@ -78,7 +98,7 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
     }
   };
 
-  const handleQuickDemoLogin = async (demoPhone, demoName, role = 'user') => {
+  const handleQuickDemo = async (demoPhone, demoName) => {
     setLoading(true);
     try {
       const res = await loginWithPhoneOtp({
@@ -89,7 +109,7 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
         language: currentLang
       });
       if (res.success) {
-        speak(`सफलतापूर्वक प्रवेश हुआ! स्वागत है ${demoName}।`);
+        speak(`${t('welcome')} ${demoName}`);
         onClose();
       }
     } finally {
@@ -98,21 +118,24 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-purple-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl border border-purple-100 dark:border-slate-800 overflow-hidden flex flex-col animate-in zoom-in-95 max-h-[90vh]">
         
-        {/* Header */}
+        {/* Header with Attached Logo and Tagline */}
         <div className="bg-womentra-gradient p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-bold">
-              💜
-            </div>
+            <img
+              src="/logo.svg"
+              alt="Womentra Logo"
+              className="w-12 h-12 rounded-2xl bg-white/20 p-1 backdrop-blur-md shadow-inner object-contain"
+            />
             <div>
-              <h3 className="text-lg font-black tracking-tight">
-                {t('loginWithPhone')}
+              <h3 className="text-lg font-black tracking-tight flex items-center gap-1.5">
+                <span>WOMENTRA</span>
+                <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
               </h3>
-              <p className="text-xs text-purple-100 font-medium">
-                सरल व सुरक्षित प्रवेश (OTP Login)
+              <p className="text-[10px] text-purple-100 font-bold">
+                {t('mission')}
               </p>
             </div>
           </div>
@@ -125,41 +148,134 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="p-6 space-y-4">
-          
-          {/* Family Member Assistance Toggle */}
-          <div className="p-3 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <HeartHandshake className="w-5 h-5 text-purple-700" />
-              <div>
-                <p className="text-xs font-bold text-purple-950">पारिवारिक सहायता मोड</p>
-                <p className="text-[10px] text-purple-700">परिवार का कोई सदस्य खाता बनाने में मदद कर रहा है</p>
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              checked={isFamilyMode}
-              onChange={(e) => setIsFamilyMode(e.target.checked)}
-              className="w-5 h-5 accent-pink-600 rounded-md cursor-pointer"
-            />
-          </div>
+        {/* Tab Switcher: Login vs Register */}
+        <div className="grid grid-cols-2 p-1.5 bg-purple-50 dark:bg-slate-800 border-b border-purple-100 dark:border-slate-700">
+          <button
+            onClick={() => {
+              setMode('login');
+              setStep('phone');
+              setErrorMsg('');
+            }}
+            className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+              mode === 'login'
+                ? 'bg-white dark:bg-slate-900 text-purple-950 dark:text-purple-200 shadow-xs'
+                : 'text-slate-500 hover:text-purple-900'
+            }`}
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>{t('loginWithPhone')}</span>
+          </button>
 
+          <button
+            onClick={() => {
+              setMode('register');
+              setStep('phone');
+              setErrorMsg('');
+            }}
+            className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+              mode === 'register'
+                ? 'bg-white dark:bg-slate-900 text-purple-950 dark:text-purple-200 shadow-xs'
+                : 'text-slate-500 hover:text-purple-900'
+            }`}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>{t('registerTitle')}</span>
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="p-5 space-y-4 overflow-y-auto">
+          
           {step === 'phone' ? (
-            <form onSubmit={handleSendOtp} className="space-y-4">
+            <form onSubmit={handleSendOtp} className="space-y-3.5">
+              
+              {mode === 'register' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {t('nameLabel')} *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Sunita Devi"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-pink-500 rounded-xl text-xs font-bold dark:text-white outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      {t('villageLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={village}
+                      onChange={(e) => setVillage(e.target.value)}
+                      placeholder="e.g. Ramnagar, Varanasi"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-pink-500 rounded-xl text-xs font-bold dark:text-white outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Preferred Learning Language</span>
+                    </label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-pink-500 rounded-xl text-xs font-bold dark:text-white outline-hidden"
+                    >
+                      {languages.map((l) => (
+                        <option key={l.code} value={l.code}>
+                          {l.flag} {l.name} ({l.englishName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Optional Guardian Linking */}
+                  <div className="p-3 bg-purple-50 dark:bg-slate-800 rounded-xl border border-purple-200 dark:border-slate-700 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-950 dark:text-purple-200">
+                        {t('guardianLinking')} (Optional)
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={hasGuardian}
+                        onChange={(e) => setHasGuardian(e.target.checked)}
+                        className="w-4 h-4 accent-pink-600 cursor-pointer"
+                      />
+                    </div>
+                    {hasGuardian && (
+                      <input
+                        type="text"
+                        value={guardianName}
+                        onChange={(e) => setGuardianName(e.target.value)}
+                        placeholder="Guardian Name / Relationship"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-purple-200 rounded-lg text-xs font-bold"
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Mobile Phone Field */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>मोबाइल नंबर (10 अंक)</span>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Mobile Number (10 Digits)</span>
                   <button
                     type="button"
-                    onClick={() => speak("कृपया अपना 10 अंकों का मोबाइल नंबर डालें।")}
-                    className="text-purple-600 hover:text-purple-800"
+                    onClick={() => speak("Please enter your 10 digit mobile number.")}
+                    className="text-purple-600 dark:text-pink-400"
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold text-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
                     🇮🇳 +91
                   </div>
                   <input
@@ -168,28 +284,13 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="9876543210"
-                    className="w-full pl-20 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 focus:border-pink-500 focus:bg-white rounded-2xl text-lg font-bold text-slate-900 tracking-wider outline-hidden transition-all"
+                    className="w-full pl-16 pr-3.5 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-pink-500 rounded-xl text-base font-bold text-slate-900 dark:text-white tracking-wider outline-hidden"
                   />
                 </div>
               </div>
 
-              {isFamilyMode && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    सखी का नाम (Learner's Name)
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="जैसे: सुनीता देवी"
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 focus:border-pink-500 rounded-2xl text-sm font-semibold outline-hidden"
-                  />
-                </div>
-              )}
-
               {errorMsg && (
-                <p className="text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                <p className="text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900">
                   ⚠️ {errorMsg}
                 </p>
               )}
@@ -197,26 +298,26 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-womentra-gradient text-white rounded-2xl font-black text-base shadow-lg shadow-pink-500/25 hover:opacity-95 transition-all touch-target-large flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-womentra-gradient text-white rounded-2xl font-black text-sm shadow-md shadow-pink-500/20 hover:opacity-95 transition-all touch-target-large flex items-center justify-center gap-2"
               >
-                <span>{loading ? 'ओटीपी भेजा जा रहा है...' : 'ओटीपी प्राप्त करें (Send OTP)'}</span>
-                <ArrowRight className="w-5 h-5" />
+                <span>{loading ? 'Sending OTP...' : 'Send OTP (ओटीपी प्राप्त करें)'}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="p-3 bg-pink-50 rounded-2xl border border-pink-200 text-center">
-                <p className="text-xs font-bold text-pink-900">
-                  +91 {phone} पर भेजा गया ओटीपी:
+            <form onSubmit={handleVerifyOtp} className="space-y-3.5">
+              <div className="p-3 bg-pink-50 dark:bg-purple-950/40 rounded-2xl border border-pink-200 dark:border-purple-800 text-center">
+                <p className="text-xs font-bold text-pink-900 dark:text-pink-200">
+                  OTP sent to +91 {phone}
                 </p>
                 <div className="flex items-center justify-center gap-2 mt-1">
-                  <span className="text-xl font-black text-pink-700 tracking-widest bg-white px-3 py-1 rounded-xl shadow-2xs">
+                  <span className="text-xl font-black text-pink-700 dark:text-pink-300 tracking-widest bg-white dark:bg-slate-800 px-3 py-1 rounded-xl shadow-2xs">
                     {demoOtpCode}
                   </span>
                   <button
                     type="button"
-                    onClick={() => speak(`आपका ओटीपी है: ${demoOtpCode.split('').join(' ')}`)}
-                    className="p-1.5 bg-white text-purple-700 rounded-xl shadow-2xs hover:bg-purple-50"
+                    onClick={() => speak(`Your OTP is ${demoOtpCode.split('').join(' ')}`)}
+                    className="p-1.5 bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 rounded-xl shadow-2xs"
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
@@ -224,8 +325,8 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  6 अंकों का ओटीपी दर्ज करें
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  {t('enterOtp')}
                 </label>
                 <input
                   type="text"
@@ -233,7 +334,7 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
-                  className="w-full text-center py-3.5 bg-slate-50 border-2 border-slate-200 focus:border-pink-500 focus:bg-white rounded-2xl text-2xl font-black text-slate-900 tracking-widest outline-hidden transition-all"
+                  className="w-full text-center py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-pink-500 rounded-xl text-2xl font-black text-slate-900 dark:text-white tracking-widest outline-hidden"
                 />
               </div>
 
@@ -246,44 +347,44 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-womentra-gradient text-white rounded-2xl font-black text-base shadow-lg shadow-pink-500/25 hover:opacity-95 transition-all touch-target-large flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-womentra-gradient text-white rounded-2xl font-black text-sm shadow-md shadow-pink-500/20 touch-target-large flex items-center justify-center gap-2"
               >
                 <UserCheck className="w-5 h-5" />
-                <span>{loading ? 'सत्यापित हो रहा है...' : 'सत्यापित करें व प्रवेश करें'}</span>
+                <span>{loading ? 'Verifying...' : 'Verify & Enter (सत्यापित करें)'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full text-center text-xs font-bold text-purple-700 hover:underline py-1"
+                className="w-full text-center text-xs font-bold text-purple-700 dark:text-pink-400 hover:underline py-1"
               >
-                ← मोबाइल नंबर बदलें
+                ← Change Number
               </button>
             </form>
           )}
 
-          {/* Quick Demo Credentials for Evaluation */}
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-              ⚡ 1-क्लिक टेस्ट क्रेडेंशियल्स (Demo Quick Entry):
+          {/* Quick Demo Login Shortcut */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              ⚡ 1-Click Evaluation Login
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('9876543210', 'Sunita Devi')}
-                className="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left"
+                onClick={() => handleQuickDemo('9876543210', 'Sunita Devi')}
+                className="p-2.5 bg-purple-50 dark:bg-slate-800 border border-purple-200 dark:border-slate-700 rounded-xl text-left"
               >
-                <p className="text-xs font-bold text-purple-950">👩🏽 Sunita Devi</p>
-                <p className="text-[10px] text-purple-700">Rural Learner (UP)</p>
+                <p className="text-xs font-bold text-purple-950 dark:text-purple-200">👩🏽 Sunita Devi</p>
+                <p className="text-[10px] text-purple-700 dark:text-slate-400">Rural Learner</p>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('9999999999', 'Admin Team', 'admin')}
-                className="p-2.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-xl text-left"
+                onClick={() => handleQuickDemo('9999999999', 'Admin Team')}
+                className="p-2.5 bg-pink-50 dark:bg-slate-800 border border-pink-200 dark:border-slate-700 rounded-xl text-left"
               >
-                <p className="text-xs font-bold text-pink-950">🛡️ Admin Portal</p>
-                <p className="text-[10px] text-pink-700">KYC & Schemes CMS</p>
+                <p className="text-xs font-bold text-pink-950 dark:text-pink-200">🛡️ Admin Team</p>
+                <p className="text-[10px] text-pink-700 dark:text-slate-400">Governance CMS</p>
               </button>
             </div>
           </div>
@@ -291,8 +392,8 @@ export const PhoneOtpLoginModal = ({ isOpen, onClose, onOpenOnboarding }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 text-center text-xs text-slate-500">
-          🔒 DPDP Act 2023 अनुपालन • डेटा पूरी तरह सुरक्षित
+        <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 text-center text-[10px] text-slate-500 font-medium">
+          🔒 DPDP Act 2023 Compliant • Privacy Protected
         </div>
 
       </div>

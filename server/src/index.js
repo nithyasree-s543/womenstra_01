@@ -1,4 +1,6 @@
 import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
@@ -15,12 +17,126 @@ import { db } from './db/store.js';
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// Initialize Socket.IO with CORS for WebRTC signaling
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Active online users & peer signaling registry
+const onlineUsers = new Map(); // socketId -> { userId, userName, role }
+const userSocketMap = new Map(); // userId -> socketId
+
+io.on('connection', (socket) => {
+  console.log(`[Socket.IO] New client connected: ${socket.id}`);
+
+  // User registers their online presence
+  socket.on('register-user', ({ userId, userName, role = 'learner' }) => {
+    onlineUsers.set(socket.id, { userId, userName, role });
+    userSocketMap.set(userId, socket.id);
+    console.log(`[Socket.IO] User registered: ${userName} (${userId}) on socket ${socket.id}`);
+    
+    // Broadcast updated available tutors/mentors
+    io.emit('online-users-updated', Array.from(onlineUsers.values()));
+  });
+
+  // Call invitation from caller to callee
+  socket.on('call-user', ({ callerId, callerName, calleeId, callType = 'video', isMinor = false }) => {
+    console.log(`[Socket.IO] Call invitation: ${callerName} -> ${calleeId} (${callType})`);
+    const calleeSocketId = userSocketMap.get(calleeId);
+
+    if (calleeSocketId) {
+      io.to(calleeSocketId).emit('incoming-call', {
+        callerId,
+        callerName,
+        callerSocketId: socket.id,
+        callType,
+        isMinor,
+        timestamp: Date.now()
+      });
+      socket.emit('call-status', { status: 'ringing', calleeId });
+    } else {
+      // Simulate tutor receiving or mentor bot answering
+      socket.emit('call-status', { 
+        status: 'ringing', 
+        calleeId, 
+        message: 'Mentor is available. Connecting room...' 
+      });
+    }
+  });
+
+  // Callee response (accept / decline)
+  socket.on('call-response', ({ callerSocketId, callerId, calleeName, accepted }) => {
+    console.log(`[Socket.IO] Call response from callee: ${accepted ? 'ACCEPTED' : 'DECLINED'}`);
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('call-response-received', {
+        calleeName,
+        calleeSocketId: socket.id,
+        accepted
+      });
+    }
+  });
+
+  // WebRTC ICE Candidates and SDP Offer/Answer relay
+  socket.on('webrtc-offer', ({ targetSocketId, offer }) => {
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-offer-received', {
+        senderSocketId: socket.id,
+        offer
+      });
+    }
+  });
+
+  socket.on('webrtc-answer', ({ targetSocketId, answer }) => {
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-answer-received', {
+        senderSocketId: socket.id,
+        answer
+      });
+    }
+  });
+
+  socket.on('webrtc-ice-candidate', ({ targetSocketId, candidate }) => {
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('webrtc-ice-candidate-received', {
+        senderSocketId: socket.id,
+        candidate
+      });
+    }
+  });
+
+  // End Call signal
+  socket.on('end-call', ({ targetSocketId }) => {
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('call-ended', { by: socket.id });
+    }
+  });
+
+  // Hand raise signal during class
+  socket.on('raise-hand', ({ userName, roomId }) => {
+    io.emit('hand-raised', { userName, timestamp: Date.now() });
+  });
+
+  socket.on('disconnect', () => {
+    const user = onlineUsers.get(socket.id);
+    if (user) {
+      userSocketMap.delete(user.userId);
+      onlineUsers.delete(socket.id);
+      io.emit('online-users-updated', Array.from(onlineUsers.values()));
+    }
+    console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
+  });
+});
 
 // Middleware
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Request logger
 app.use((req, res, next) => {
@@ -28,13 +144,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Root & Health
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    app: 'Womentra API',
+    app: 'Womentra Full-Stack Platform',
     tagline: 'Learn • Grow • Lead (Her Potential. Her Power. Her Future.)',
-    version: '1.0.0',
+    version: '2.0.0',
+    webrtcSignaling: 'ready',
     timestamp: new Date().toISOString()
   });
 });
@@ -58,10 +175,17 @@ app.get('/api/daily-affirmation', (req, res) => {
   res.json({ success: true, affirmation: randomAff, stories });
 });
 
-// Live tutoring rooms & mock signaling endpoint
+// Live tutoring rooms & signaling status
 app.get('/api/live-sessions', (req, res) => {
   const sessions = db.get('liveSessions');
-  res.json({ success: true, sessions });
+  res.json({ 
+    success: true, 
+    sessions,
+    stunServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
+    ]
+  });
 });
 
 // 404 Handler
@@ -75,9 +199,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`=========================================`);
-  console.log(`💜 WOMENTRA BACKEND RUNNING ON PORT ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`=================================================`);
+  console.log(`💜 WOMENTRA FULL-STACK & WEBRTC SERVER ON PORT ${PORT}`);
   console.log(`🚀 REST API: http://localhost:${PORT}/api/health`);
-  console.log(`=========================================`);
+  console.log(`📡 Socket.IO WebRTC Signaling Enabled`);
+  console.log(`=================================================`);
 });

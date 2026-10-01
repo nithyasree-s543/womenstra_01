@@ -25,6 +25,7 @@ import { TutorKycView } from './components/tutors/TutorKycView';
 
 export const App = () => {
   const { currentLang, setIsLanguageModalOpen } = useLanguage();
+  const { speak } = useVoiceNarrator();
   const { user } = useAuth();
 
   const [currentView, setCurrentView] = useState('dashboard');
@@ -46,8 +47,18 @@ export const App = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleTourTryAction = (actionTarget) => {
+    if (actionTarget === 'language') {
+      setIsLanguageModalOpen(true);
+    } else if (actionTarget === 'auth') {
+      setIsAuthOpen(true);
+    } else if (actionTarget) {
+      handleNavigate(actionTarget);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#FAF7FC] flex flex-col font-sans selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-[#FAF7FC] dark:bg-slate-950 flex flex-col font-sans selection:bg-pink-500 selection:text-white transition-colors duration-200">
       
       {/* Top Header */}
       <Header
@@ -60,105 +71,105 @@ export const App = () => {
       {/* Main Viewport Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-2 sm:p-4">
         
-        {/* Quick View Switcher Badges for Deep Exploration */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-3 pt-1 px-2 text-xs font-bold text-purple-900 scrollbar-none">
+        {/* Quick View Navigation Chips for direct access */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-3 pt-1 px-2 text-xs font-bold text-purple-900 dark:text-purple-300 scrollbar-none">
           <button
             onClick={() => handleNavigate('dashboard')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'dashboard' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'dashboard' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🏠 मुख्य डैशबोर्ड
-          </button>
-
-          <button
-            onClick={() => handleNavigate('schemes')}
-            className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'schemes' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
-            }`}
-          >
-            🏛️ सरकारी साथी
+            🏠 Dashboard
           </button>
 
           <button
             onClick={() => handleNavigate('courses')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'courses' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'courses' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🧵 हुनर हब
+            💻 Learning Skills
+          </button>
+
+          <button
+            onClick={() => handleNavigate('schemes')}
+            className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
+              currentView === 'schemes' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
+            }`}
+          >
+            🏛️ Government Services
           </button>
 
           <button
             onClick={() => handleNavigate('mentorship')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'mentorship' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'mentorship' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🤝 मेरी मेंटर
+            🤝 Mentor Connect
           </button>
 
           <button
             onClick={() => handleNavigate('live')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'live' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'live' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            📹 लाइव क्लास रूम
+            📹 WebRTC Video Class
           </button>
 
           <button
             onClick={() => handleNavigate('tutor-kyc')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'tutor-kyc' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'tutor-kyc' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🛡️ ट्यूटर e-KYC
+            🛡️ Tutor e-KYC
           </button>
 
           <button
             onClick={() => handleNavigate('community')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'community' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'community' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            👭 सखी संगम
+            👭 Sakhi Circle
           </button>
 
           <button
             onClick={() => handleNavigate('confidence')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'confidence' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'confidence' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🌸 आत्मविश्वास
+            🌸 Confidence & Badges
           </button>
 
           <button
             onClick={() => handleNavigate('pricing')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'pricing' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'pricing' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            💳 योजनाएं व शुल्क
+            💳 Pricing & NGO Codes
           </button>
 
           <button
             onClick={() => handleNavigate('safety')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'safety' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'safety' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            🚨 सुरक्षा SOS
+            🚨 Safety SOS
           </button>
 
           <button
             onClick={() => handleNavigate('admin')}
             className={`px-3 py-1.5 rounded-xl border transition-all touch-target-large ${
-              currentView === 'admin' ? 'bg-purple-900 text-white' : 'bg-white border-purple-100 hover:bg-purple-50'
+              currentView === 'admin' ? 'bg-purple-900 text-white shadow-xs' : 'bg-white dark:bg-slate-900 border-purple-100 dark:border-slate-800 hover:bg-purple-50'
             }`}
           >
-            ⚙️ प्रशासन (Admin)
+            ⚙️ Admin CMS
           </button>
         </div>
 
@@ -170,8 +181,8 @@ export const App = () => {
             onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
-        {currentView === 'schemes' && <SarkariSaathiView />}
         {currentView === 'courses' && <LearningHubView />}
+        {currentView === 'schemes' && <SarkariSaathiView />}
         {currentView === 'mentorship' && <MentorshipView onNavigateLive={() => handleNavigate('live')} />}
         {currentView === 'live' && <LiveClassView onLeave={() => handleNavigate('dashboard')} />}
         {currentView === 'tutor-kyc' && <TutorKycView />}
@@ -194,7 +205,6 @@ export const App = () => {
       <PhoneOtpLoginModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        onOpenOnboarding={() => setIsOnboardingOpen(true)}
       />
       <VoiceOnboardingModal
         isOpen={isOnboardingOpen}
@@ -203,6 +213,7 @@ export const App = () => {
       <InteractiveAppTourModal
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
+        onTryAction={handleTourTryAction}
       />
 
     </div>

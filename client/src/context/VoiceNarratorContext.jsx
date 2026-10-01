@@ -8,10 +8,11 @@ export const VoiceNarratorProvider = ({ children }) => {
   const { currentLang, langConfig } = useLanguage();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentText, setCurrentText] = useState('');
+  const [activeSubtitle, setActiveSubtitle] = useState('');
   const [autoNarrateEnabled, setAutoNarrateEnabled] = useState(true);
   const [isDidiModalOpen, setIsDidiModalOpen] = useState(false);
+  const [noVoiceWarning, setNoVoiceWarning] = useState(false);
 
-  // Stop speech when component unmounts or language changes
   useEffect(() => {
     return () => speechService.cancel();
   }, [currentLang]);
@@ -20,13 +21,30 @@ export const VoiceNarratorProvider = ({ children }) => {
     if (!text) return;
     speechService.cancel();
     setCurrentText(text);
+    setActiveSubtitle(text);
     setIsSpeaking(true);
 
-    const bcp47 = customLang || langConfig?.bcp47 || 'hi-IN';
-    speechService.speak(text, bcp47, () => {
-      setIsSpeaking(false);
-      setCurrentText('');
-    });
+    const bcp47 = customLang || langConfig?.bcp47 || 'en-IN';
+    
+    // Check if voice exists
+    const hasVoice = speechService.hasVoiceForLanguage(bcp47);
+    if (!hasVoice && bcp47 !== 'en-IN') {
+      setNoVoiceWarning(true);
+    } else {
+      setNoVoiceWarning(false);
+    }
+
+    speechService.speak(
+      text,
+      bcp47,
+      () => {
+        setIsSpeaking(false);
+        setCurrentText('');
+      },
+      () => {
+        setNoVoiceWarning(true);
+      }
+    );
   }, [langConfig]);
 
   const narrateScreen = useCallback((screenNarrativeText) => {
@@ -39,6 +57,7 @@ export const VoiceNarratorProvider = ({ children }) => {
     speechService.cancel();
     setIsSpeaking(false);
     setCurrentText('');
+    setActiveSubtitle('');
   }, []);
 
   return (
@@ -48,10 +67,13 @@ export const VoiceNarratorProvider = ({ children }) => {
       narrateScreen,
       isSpeaking,
       currentText,
+      activeSubtitle,
       autoNarrateEnabled,
       setAutoNarrateEnabled,
       isDidiModalOpen,
-      setIsDidiModalOpen
+      setIsDidiModalOpen,
+      noVoiceWarning,
+      setNoVoiceWarning
     }}>
       {children}
     </VoiceNarratorContext.Provider>
