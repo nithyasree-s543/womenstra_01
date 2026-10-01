@@ -1,0 +1,27 @@
+{
+  "name": "womentra",
+  "version": "1.0.0",
+  "description": "💜 Womentra - Voice-first empowerment PWA for rural women in India. Learn • Grow • Lead",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "women-empowerment",
+    "rural-india",
+    "voice-first",
+    "pwa",
+    "gemini-ai",
+    "sdg5",
+    "sdg4",
+    "sdg10"
+  ],
+  "author": "Womentra Initiative",
+  "license": "MIT"
+}

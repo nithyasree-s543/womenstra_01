@@ -1,0 +1,22 @@
+{
+  "name": "Womentra - Rural Women Empowerment",
+  "short_name": "Womentra",
+  "description": "Voice-First Empowerment Platform for Rural Women. Learn • Grow • Lead.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF7FC",
+  "theme_color": "#4B0F6B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%234B0F6B'/><path d='M50 130 L80 60 L100 105 L120 60 L150 130' stroke='%23E0338B' stroke-width='16' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='150' cy='50' r='12' fill='%23F59E0B'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234B0F6B'/><path d='M130 350 L210 160 L260 280 L310 160 L390 350' stroke='%23E0338B' stroke-width='40' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='390' cy='140' r='30' fill='%23F59E0B'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
