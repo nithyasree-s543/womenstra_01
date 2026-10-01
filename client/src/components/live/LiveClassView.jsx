@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Video, VideoOff, Mic, MicOff, Hand, MessageSquare, Users, 
-  ShieldCheck, PhoneOff, PhoneCall, PhoneForwarded, Volume2, 
-  Sparkles, AlertTriangle, Eye, RefreshCw, CheckCircle2 
+import {
+  Video, VideoOff, Mic, MicOff, Hand, MessageSquare, Users,
+  ShieldCheck, PhoneOff, PhoneCall, PhoneForwarded, Volume2,
+  Sparkles, AlertTriangle, Eye, RefreshCw, CheckCircle2
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useLanguage } from '../../context/LanguageContext';
@@ -13,8 +13,14 @@ import confetti from 'canvas-confetti';
 
 const STUN_SERVERS = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: import.meta.env.VITE_STUN_URL || 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    // TURN server from env (needed for strict NAT)
+    ...(import.meta.env.VITE_TURN_URL ? [{
+      urls: import.meta.env.VITE_TURN_URL,
+      username: import.meta.env.VITE_TURN_USERNAME || '',
+      credential: import.meta.env.VITE_TURN_CREDENTIAL || ''
+    }] : [])
   ]
 };
 
@@ -23,20 +29,20 @@ export const LiveClassView = ({ onLeave }) => {
   const { speak, narrateScreen } = useVoiceNarrator();
   const { user, activeDependent } = useAuth();
 
-  // Call States: 'permission' | 'calling' | 'incoming' | 'in-call' | 'ended'
-  const [callState, setCallState] = useState('permission');
-  const [permissionError, setPermissionError] = useState(null);
-  
+  // Call States: 'explain' | 'permission' | 'calling' | 'incoming' | 'in-call' | 'ended'
+  const [callState, setCallState] = useState('explain');
+  const [permissionError, setPermissionError] = useState(null); // { key: string, type: string }
+
   // Media Controls
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isLowBandwidthMode, setIsLowBandwidthMode] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  
+
   // Caller / Callee Data
   const [incomingCallData, setIncomingCallData] = useState(null);
   const [callStatusMessage, setCallStatusMessage] = useState('');
-  
+
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -98,7 +104,7 @@ export const LiveClassView = ({ onLeave }) => {
       if (peerConnectionRef.current && candidate) {
         try {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch {}
+        } catch { }
       }
     });
 
@@ -124,6 +130,7 @@ export const LiveClassView = ({ onLeave }) => {
   // Step 1: Request Camera & Microphone Permissions
   const handleRequestPermissions = async () => {
     setPermissionError(null);
+    setCallState('permission'); // show loading state
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 } },
@@ -131,17 +138,29 @@ export const LiveClassView = ({ onLeave }) => {
       });
 
       localStreamRef.current = stream;
+      // Show live preview immediately after permission granted
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => { });
       }
 
       setCallState('in-call');
-      speak("Camera and microphone connected successfully.");
+      speak("Camera and microphone connected. You can see yourself now.");
       setupWebRTCConnection(stream);
     } catch (err) {
-      console.warn('Media devices error:', err);
-      setPermissionError(t('permissionDeniedHelp'));
-      speak(t('permissionDeniedHelp'));
+      console.warn('Media devices error:', err.name, err.message);
+      // Map error names to specific i18n keys
+      let errorKey = 'cameraUnknownError';
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorKey = 'cameraNotAllowed';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorKey = 'cameraNotFound';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorKey = 'cameraInUse';
+      }
+      setPermissionError({ key: errorKey, type: err.name });
+      setCallState('permission'); // stay on permission screen
+      speak(t(errorKey));
     }
   };
 
@@ -281,7 +300,7 @@ export const LiveClassView = ({ onLeave }) => {
 
   return (
     <div className="space-y-4 pb-24 max-w-4xl mx-auto px-3 sm:px-4 pt-2">
-      
+
       {/* 1. Header Bar with Minor Protection Notice */}
       <div className="bg-slate-900 rounded-3xl p-4 text-white shadow-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -325,11 +344,40 @@ export const LiveClassView = ({ onLeave }) => {
         </div>
       )}
 
-      {/* 2. Permission Request State Screen */}
+      {/* 2a. EXPLAIN Screen: tell the user WHY camera is needed before asking */}
+      {callState === 'explain' && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-purple-100 dark:border-slate-800 shadow-xl text-center space-y-5 max-w-md mx-auto">
+          <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-950 flex items-center justify-center mx-auto text-4xl">
+            📹
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-purple-950 dark:text-white">
+              {t('cameraWhyTitle')}
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+              {t('cameraWhyDesc')}
+            </p>
+          </div>
+          <button
+            onClick={() => { setCallState('permission'); handleRequestPermissions(); }}
+            className="w-full py-4 bg-womentra-gradient text-white rounded-2xl font-black text-sm shadow-md shadow-pink-500/20 hover:opacity-95 transition-all touch-target-large"
+          >
+            {t('allowCamera')} ✓
+          </button>
+          <button
+            onClick={onLeave}
+            className="w-full py-2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold"
+          >
+            {t('endCall')}
+          </button>
+        </div>
+      )}
+
+      {/* 2b. Permission Request / Error State */}
       {callState === 'permission' && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-purple-100 dark:border-slate-800 shadow-xl text-center space-y-5 max-w-md mx-auto">
           <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center mx-auto text-3xl">
-            📹
+            📷
           </div>
           <div>
             <h3 className="text-lg font-black text-purple-950 dark:text-white">
@@ -340,18 +388,26 @@ export const LiveClassView = ({ onLeave }) => {
             </p>
           </div>
 
+          {/* Specific error message by type */}
           {permissionError && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl text-left">
-              {permissionError}
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-left space-y-2">
+              <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                ⚠️ {t(permissionError.key)}
+              </p>
+              {permissionError.type && (
+                <p className="text-[10px] text-rose-500 dark:text-rose-400 font-mono">
+                  ({permissionError.type})
+                </p>
+              )}
             </div>
           )}
 
           <div className="space-y-2">
             <button
               onClick={handleRequestPermissions}
-              className="w-full py-4 bg-womentra-gradient text-white rounded-2xl font-black text-sm shadow-md shadow-pink-500/20 hover:opacity-95 transition-all"
+              className="w-full py-4 bg-womentra-gradient text-white rounded-2xl font-black text-sm shadow-md shadow-pink-500/20 hover:opacity-95 transition-all touch-target-large"
             >
-              Allow & Connect Camera & Mic ✓
+              {permissionError ? t('retryCamera') : t('allowCamera')} ✓
             </button>
 
             <button
@@ -400,9 +456,9 @@ export const LiveClassView = ({ onLeave }) => {
       {/* 4. Active In-Call WebRTC Video Stage */}
       {callState === 'in-call' && (
         <div className="space-y-4">
-          
+
           <div className="relative aspect-video rounded-3xl overflow-hidden bg-slate-950 border-2 border-purple-900 shadow-2xl flex items-center justify-center">
-            
+
             {/* Remote Mentor Feed */}
             {isLowBandwidthMode ? (
               <div className="text-center p-6 space-y-3">
@@ -422,7 +478,7 @@ export const LiveClassView = ({ onLeave }) => {
                   className="w-full h-full object-cover opacity-90"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                
+
                 {/* Live Caption Subtitle Banner in Selected Language */}
                 <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md p-3 rounded-2xl border border-white/20 text-center">
                   <p className="text-xs sm:text-sm font-bold text-amber-300">
@@ -457,15 +513,14 @@ export const LiveClassView = ({ onLeave }) => {
 
           {/* 5. In-Call Control Dock (Large Touch Targets) */}
           <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-purple-100 dark:border-slate-800 shadow-lg flex items-center justify-around gap-2">
-            
+
             {/* Toggle Mic */}
             <button
               onClick={handleToggleMic}
-              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${
-                isMicOn 
-                  ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800' 
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${isMicOn
+                  ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800'
                   : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200'
-              }`}
+                }`}
             >
               {isMicOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
               <span className="text-[10px] font-bold">{isMicOn ? t('muteMic') : t('unmuteMic')}</span>
@@ -474,11 +529,10 @@ export const LiveClassView = ({ onLeave }) => {
             {/* Toggle Camera */}
             <button
               onClick={handleToggleVideo}
-              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${
-                isVideoOn 
-                  ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800' 
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${isVideoOn
+                  ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-              }`}
+                }`}
             >
               {isVideoOn ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
               <span className="text-[10px] font-bold">{isVideoOn ? t('cameraOn') : t('cameraOff')}</span>
@@ -487,11 +541,10 @@ export const LiveClassView = ({ onLeave }) => {
             {/* Raise Hand by Voice */}
             <button
               onClick={handleRaiseHand}
-              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${
-                isHandRaised 
-                  ? 'bg-amber-100 text-amber-900 border-2 border-amber-500 animate-bounce' 
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${isHandRaised
+                  ? 'bg-amber-100 text-amber-900 border-2 border-amber-500 animate-bounce'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-              }`}
+                }`}
             >
               <Hand className="w-6 h-6" />
               <span className="text-[10px] font-bold">{isHandRaised ? 'Hand Raised' : t('raiseHand')}</span>
@@ -500,11 +553,10 @@ export const LiveClassView = ({ onLeave }) => {
             {/* 2G Low Bandwidth Audio Toggle */}
             <button
               onClick={handleToggleLowBandwidth}
-              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${
-                isLowBandwidthMode 
-                  ? 'bg-emerald-600 text-white shadow-md' 
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl touch-target-large transition-all ${isLowBandwidthMode
+                  ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-              }`}
+                }`}
             >
               <Volume2 className="w-6 h-6" />
               <span className="text-[10px] font-bold">{isLowBandwidthMode ? '2G Audio ON' : t('audioOnlyMode')}</span>

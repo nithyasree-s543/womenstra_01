@@ -4,7 +4,28 @@ const API_BASE = '/api';
 
 export const api = {
   // Auth
-  sendOtp: async (phone, language = 'hi') => {
+
+  /** Register new user with name + phone + password + village + language */
+  register: async ({ phone, password, name, village, language }) => {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password, name, village, language })
+    });
+    return res.json();
+  },
+
+  /** Password login step 1: validates password, returns OTP challenge */
+  loginWithPassword: async ({ phone, password, language }) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password, language })
+    });
+    return res.json();
+  },
+
+  sendOtp: async (phone, language = 'en') => {
     const res = await fetch(`${API_BASE}/auth/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

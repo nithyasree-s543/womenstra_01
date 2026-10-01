@@ -2,6 +2,8 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import schemesRoutes from './routes/schemes.js';
@@ -133,8 +135,32 @@ io.on('connection', (socket) => {
   });
 });
 
-// Middleware
-app.use(cors({ origin: '*' }));
+// Security & Middleware
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
+// Helmet: secure HTTP headers (disable CSP in dev so Vite HMR works)
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// CORS: restricted to client URL
+app.use(cors({
+  origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:4173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+}));
+
+// Rate limiting on auth routes (login + OTP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,                   // max 20 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts. Please wait 15 minutes and try again.' }
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/send-otp', authLimiter);
+app.use('/api/auth/verify-otp', authLimiter);
+
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 

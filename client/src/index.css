@@ -9,29 +9,43 @@
     --bg-light: #FAF7FC;
   }
 
+  /* ── Dark mode CSS variables ──────────────────────────────────────── */
+  :root.dark {
+    --bg-base: #0F0B1A;
+    --card-bg: #1A1229;
+  }
+
   body {
-    background-color: #FAF7FC;
+    background-color: var(--bg-light);
     color: #1F2937;
-    font-family: 'Noto Sans', 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* Noto Sans + all Indian scripts for zero-literacy support */
+    font-family:
+      'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu',
+      'Noto Sans Bengali', 'Noto Sans Gujarati', 'Noto Sans Kannada',
+      'Noto Sans Malayalam', 'Outfit', system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
+
+  .dark body {
+    background-color: #0F0B1A;
+    color: #f1f5f9;
+  }
 }
 
-/* Custom Scrollbar for Smooth Touch Devices */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #F3E8FF;
-}
-::-webkit-scrollbar-thumb {
-  background: #C084FC;
-  border-radius: 9999px;
+/* ── Display font for the WOMENSTRA brand wordmark ────────────────── */
+.font-display {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
 }
 
-/* Gradient Utilities */
+/* ── Custom Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F3E8FF; }
+::-webkit-scrollbar-thumb { background: #C084FC; border-radius: 9999px; }
+.dark ::-webkit-scrollbar-track { background: #1e1538; }
+.dark ::-webkit-scrollbar-thumb { background: #7c3aed; }
+
+/* ── Gradient Utilities ────────────────────────────────────────────── */
 .bg-womentra-gradient {
   background: linear-gradient(135deg, #4B0F6B 0%, #8B1874 50%, #E0338B 100%);
 }
@@ -40,51 +54,53 @@
   background: linear-gradient(145deg, #ffffff 0%, #FAF5FF 100%);
 }
 
+.dark .bg-womentra-card {
+  background: linear-gradient(145deg, #1A1229 0%, #231840 100%);
+}
+
 .text-womentra-gradient {
   background: linear-gradient(135deg, #4B0F6B 0%, #E0338B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Minimum 56px touch target for zero-literacy & rural accessibility */
+/* In dark mode the gradient text still reads well */
+.dark .text-womentra-gradient {
+  background: linear-gradient(135deg, #c084fc 0%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Minimum 56px touch target ─────────────────────────────────────── */
 .touch-target-large {
   min-height: 56px;
   min-width: 56px;
 }
 
-/* Pulse animation for voice speaking and microphone active state */
+/* ── Voice Pulse Animation ─────────────────────────────────────────── */
 @keyframes voice-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(224, 51, 139, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 18px rgba(224, 51, 139, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(224, 51, 139, 0);
-  }
+  0%   { box-shadow: 0 0 0 0   rgba(224, 51, 139, 0.7); }
+  70%  { box-shadow: 0 0 0 18px rgba(224, 51, 139, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(224, 51, 139, 0);   }
 }
+.animate-voice-listening { animation: voice-pulse 1.8s infinite; }
 
-.animate-voice-listening {
-  animation: voice-pulse 1.8s infinite;
-}
-
+/* ── Mascot Bob Animation ──────────────────────────────────────────── */
 @keyframes gentle-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
 }
+.animate-mascot-bob { animation: gentle-bounce 3s ease-in-out infinite; }
 
-.animate-mascot-bob {
-  animation: gentle-bounce 3s ease-in-out infinite;
-}
-
-/* Leaflet map styles */
+/* ── Leaflet Map ───────────────────────────────────────────────────── */
 .leaflet-container {
   width: 100%;
   height: 100%;
   border-radius: 1rem;
+}
+
+/* ── Dark mode card / surface helpers ─────────────────────────────── */
+.dark .surface {
+  background-color: #1A1229;
+  border-color: #2d1f4a;
 }

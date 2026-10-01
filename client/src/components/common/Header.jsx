@@ -1,7 +1,7 @@
 import React from 'react';
-import { 
-  Sparkles, Volume2, VolumeX, Globe, Sun, Moon, Monitor, 
-  User, Award, Flame, LogOut, PhoneCall 
+import {
+  Sparkles, Volume2, VolumeX, Globe, Sun, Moon, Monitor,
+  User, LogOut
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useVoiceNarrator } from '../../context/VoiceNarratorContext';
@@ -10,18 +10,19 @@ import { useAuth } from '../../context/AuthContext';
 export const Header = ({ onOpenAuth, onOpenTour, currentView, onViewChange }) => {
   const { currentLang, langConfig, setIsLanguageModalOpen, t, theme, toggleTheme } = useLanguage();
   const { isSpeaking, stop, autoNarrateEnabled, setAutoNarrateEnabled, noVoiceWarning } = useVoiceNarrator();
-  const { user, activeDependent, setActiveDependent, logout } = useAuth();
+  const { user, logout } = useAuth();
 
-  const getNextTheme = () => {
-    if (theme === 'light') return 'dark';
-    if (theme === 'dark') return 'system';
-    return 'light';
+  const cycleTheme = () => {
+    const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    toggleTheme(next);
   };
 
+  const themeLabel = theme === 'light' ? t('themeLight') : theme === 'dark' ? t('themeDark') : t('themeSystem');
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-purple-100 dark:border-slate-800 shadow-xs px-3 sm:px-4 py-2 transition-colors duration-200">
-      
-      {/* Subtitle Notice if browser has no native voice for selected Indian language */}
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0F0B1A]/95 backdrop-blur-md border-b border-purple-100 dark:border-purple-900/40 shadow-sm px-3 sm:px-4 py-2 transition-colors duration-200">
+
+      {/* No-voice subtitle warning */}
       {noVoiceWarning && (
         <div className="bg-amber-500/10 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200 text-[11px] font-semibold text-center py-1 px-2 border-b border-amber-500/20">
           ℹ️ {langConfig.name}: Browser voice unavailable. Live subtitles enabled below.
@@ -29,71 +30,75 @@ export const Header = ({ onOpenAuth, onOpenTour, currentView, onViewChange }) =>
       )}
 
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
-        
-        {/* Brand Logo & Name with Logo Image and Tagline */}
-        <button 
+
+        {/* ── Brand: logo + name + tagline ── */}
+        <button
           onClick={() => onViewChange('dashboard')}
-          className="flex items-center gap-2.5 text-left group focus:outline-hidden"
-          aria-label="Womentra Home"
+          className="flex items-center gap-2.5 text-left group focus:outline-none"
+          aria-label="Womenstra Home"
         >
           <img
-            src="/logo.svg"
-            alt="Womentra Logo"
-            className="w-10 h-10 rounded-2xl shadow-md shadow-purple-500/20 transition-transform group-hover:scale-105 shrink-0 object-contain"
+            src="/logo.png"
+            alt="Womenstra Logo"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl shadow-md shadow-purple-500/20 object-contain transition-transform group-hover:scale-105 shrink-0 bg-white"
+            onError={(e) => { e.target.src = '/logo.svg'; }}
           />
           <div>
+            {/* WOMENSTRA in Playfair Display – brand gradient text */}
             <div className="flex items-center gap-1">
-              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-womentra-gradient">
-                WOMENTRA
+              <span
+                className="font-display font-black text-lg sm:text-xl tracking-widest text-womentra-gradient"
+                aria-label="WOMENSTRA"
+              >
+                WOMENSTRA
               </span>
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse fill-amber-400" />
             </div>
-            <p className="text-[9px] sm:text-[10px] font-bold text-purple-700 dark:text-pink-400 tracking-wider">
+            {/* Tagline translated in selected language */}
+            <p className="text-[9px] sm:text-[10px] font-bold text-purple-700 dark:text-pink-300 tracking-wide leading-tight">
               {t('mission')}
             </p>
           </div>
         </button>
 
-        {/* Right Controls: Auto-Voice, Theme Toggle, Language Chip, Profile */}
+        {/* ── Right Controls ── */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          
-          {/* Audio Auto-Narrator Toggle */}
+
+          {/* Auto-Voice toggle */}
           <button
             onClick={() => {
               if (isSpeaking) stop();
               setAutoNarrateEnabled(!autoNarrateEnabled);
             }}
             className={`p-2 sm:p-2.5 rounded-xl border transition-all flex items-center gap-1 touch-target-large ${
-              autoNarrateEnabled 
-                ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300' 
+              autoNarrateEnabled
+                ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
             }`}
             title="Auto-voice narrator"
             aria-label="Auto-voice narrator"
           >
-            {autoNarrateEnabled ? (
-              <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 ${isSpeaking ? 'text-pink-600 animate-bounce' : 'text-purple-700 dark:text-purple-300'}`} />
-            ) : (
-              <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
-            )}
+            {autoNarrateEnabled
+              ? <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 ${isSpeaking ? 'text-pink-600 animate-bounce' : 'text-purple-700 dark:text-purple-300'}`} />
+              : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
 
-          {/* Theme Toggle (Light / Dark / System) */}
+          {/* Theme Toggle: Light / Dark / System */}
           <button
-            onClick={() => toggleTheme(getNextTheme())}
-            className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-purple-300 transition-all touch-target-large flex items-center justify-center"
-            title={`Theme: ${theme}`}
-            aria-label="Theme toggle"
+            onClick={cycleTheme}
+            className="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-purple-300 dark:hover:border-purple-600 transition-all touch-target-large flex items-center justify-center"
+            title={`Theme: ${themeLabel}`}
+            aria-label={`Theme: ${themeLabel}`}
           >
-            {theme === 'light' && <Sun className="w-4 h-4 text-amber-500" />}
-            {theme === 'dark' && <Moon className="w-4 h-4 text-purple-400" />}
-            {theme === 'system' && <Monitor className="w-4 h-4 text-slate-500" />}
+            {theme === 'light'  && <Sun   className="w-4 h-4 text-amber-500" />}
+            {theme === 'dark'   && <Moon  className="w-4 h-4 text-purple-400" />}
+            {theme === 'system' && <Monitor className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
           </button>
 
-          {/* Language Chip (Globe + Current Language Name) */}
+          {/* Language Chip */}
           <button
             onClick={() => setIsLanguageModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-slate-800 dark:to-purple-950 border border-purple-200 dark:border-purple-800 rounded-xl hover:border-purple-400 transition-all shadow-xs touch-target-large"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-slate-800 dark:to-purple-900/40 border border-purple-200 dark:border-purple-700 rounded-xl hover:border-purple-400 dark:hover:border-purple-500 transition-all shadow-sm touch-target-large"
             aria-label="Change Language"
           >
             <span className="text-base">{langConfig.flag}</span>
@@ -101,15 +106,15 @@ export const Header = ({ onOpenAuth, onOpenTour, currentView, onViewChange }) =>
             <Globe className="w-3.5 h-3.5 text-purple-600 dark:text-pink-400 ml-0.5" />
           </button>
 
-          {/* User Profile / Login */}
+          {/* User Avatar / Login */}
           {user ? (
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => onViewChange('dashboard')}
-                className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 bg-purple-100 dark:bg-purple-950 hover:bg-purple-200 rounded-xl transition-all"
+                className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-900/60 rounded-xl transition-all"
               >
-                <div className="w-7 h-7 rounded-lg bg-womentra-gradient text-white flex items-center justify-center font-bold text-xs">
-                  {user.name ? user.name[0] : 'S'}
+                <div className="w-7 h-7 rounded-lg bg-womentra-gradient text-white flex items-center justify-center font-black text-xs shrink-0">
+                  {user.name ? user.name[0].toUpperCase() : 'S'}
                 </div>
                 <span className="text-xs font-bold text-purple-900 dark:text-purple-200 max-w-[70px] truncate hidden sm:inline">
                   {user.name.split(' ')[0]}
@@ -118,8 +123,9 @@ export const Header = ({ onOpenAuth, onOpenTour, currentView, onViewChange }) =>
 
               <button
                 onClick={logout}
-                className="p-2 text-slate-400 hover:text-rose-600 rounded-xl"
+                className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl transition-all"
                 title={t('logout')}
+                aria-label={t('logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>
