@@ -9,6 +9,7 @@ import { LanguageSelectModal } from './components/common/LanguageSelectModal';
 import { PhoneOtpLoginModal } from './components/auth/PhoneOtpLoginModal';
 import { VoiceOnboardingModal } from './components/auth/VoiceOnboardingModal';
 import { InteractiveAppTourModal } from './components/tutorial/InteractiveAppTourModal';
+import { AuthPage } from './components/auth/AuthPage';
 
 // Views
 import { DashboardView } from './components/dashboard/DashboardView';
@@ -24,9 +25,9 @@ import { LiveClassView } from './components/live/LiveClassView';
 import { TutorKycView } from './components/tutors/TutorKycView';
 
 export const App = () => {
-  const { currentLang, setIsLanguageModalOpen } = useLanguage();
+  const { currentLang, setIsLanguageModalOpen, t } = useLanguage();
   const { speak } = useVoiceNarrator();
-  const { user } = useAuth();
+  const { user, isCheckingAuth, logout } = useAuth();
 
   const [currentView, setCurrentView] = useState('dashboard');
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -57,6 +58,44 @@ export const App = () => {
     }
   };
 
+  // 1. Initial Auth Check Loading State
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#FAF7FC] dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <div className="text-center space-y-4 animate-in fade-in zoom-in duration-300">
+          <div className="relative inline-block">
+            <img
+              src="/logo.png"
+              alt="WOMENSTRA Logo"
+              className="w-20 h-20 mx-auto rounded-3xl shadow-xl shadow-purple-500/20 bg-white p-1 animate-pulse"
+              onError={(e) => { e.target.src = '/logo.svg'; }}
+            />
+          </div>
+          <div>
+            <h1 className="font-display font-black text-2xl tracking-widest text-womentra-gradient">
+              WOMENSTRA
+            </h1>
+            <p className="text-xs text-purple-700 dark:text-pink-300 font-bold mt-0.5">
+              {t('mission')}
+            </p>
+          </div>
+          <div className="w-8 h-8 border-4 border-purple-200 border-t-pink-500 rounded-full animate-spin mx-auto mt-2" />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated State: Show Login or Register Page
+  if (!user) {
+    return (
+      <>
+        <AuthPage onAuthSuccess={() => handleNavigate('dashboard')} />
+        <LanguageSelectModal />
+      </>
+    );
+  }
+
+  // 3. Authenticated State: Full Womentra Experience
   return (
     <div className="min-h-screen bg-[#FAF7FC] dark:bg-slate-950 flex flex-col font-sans selection:bg-pink-500 selection:text-white transition-colors duration-200">
       

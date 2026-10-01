@@ -12,7 +12,44 @@ export const AuthProvider = ({ children }) => {
   });
   const [token, setToken] = useState(() => localStorage.getItem('womentra_token') || null);
   const [loading, setLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeDependent, setActiveDependent] = useState(null);
+
+  // Check /api/auth/me on mount using httpOnly cookie and/or Bearer token
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkAuthStatus = async () => {
+      try {
+        const savedToken = localStorage.getItem('womentra_token');
+        const res = await api.getCurrentUser(savedToken);
+        if (isMounted) {
+          if (res.success && res.user) {
+            setUser(res.user);
+          } else {
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('womentra_user');
+            localStorage.removeItem('womentra_token');
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setUser(null);
+          setToken(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
+      }
+    };
+
+    checkAuthStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -32,7 +69,6 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * REGISTER: name + phone + password + village + language
-   * Returns { success, user?, message? }
    */
   const register = async ({ phone, password, name, village, language }) => {
     setLoading(true);
@@ -53,7 +89,6 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * PASSWORD LOGIN: phone + password → get OTP challenge
-   * Returns { success, requiresOtp, demoOtp?, voicePrompt?, message? }
    */
   const loginWithPassword = async ({ phone, password, language }) => {
     setLoading(true);
@@ -107,7 +142,10 @@ export const AuthProvider = ({ children }) => {
     setUser(prev => prev ? { ...prev, ...updatedFields } : null);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch { }
     setUser(null);
     setToken(null);
     setActiveDependent(null);
@@ -120,6 +158,7 @@ export const AuthProvider = ({ children }) => {
       user,
       token,
       loading,
+      isCheckingAuth,
       register,
       loginWithPassword,
       loginWithPhoneOtp,

@@ -9,6 +9,7 @@ export const api = {
   register: async ({ phone, password, name, village, language }) => {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password, name, village, language })
     });
@@ -19,6 +20,7 @@ export const api = {
   loginWithPassword: async ({ phone, password, language }) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password, language })
     });
@@ -28,6 +30,7 @@ export const api = {
   sendOtp: async (phone, language = 'en') => {
     const res = await fetch(`${API_BASE}/auth/send-otp`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, language })
     });
@@ -37,8 +40,17 @@ export const api = {
   verifyOtp: async ({ phone, otp, name, village, language }) => {
     const res = await fetch(`${API_BASE}/auth/verify-otp`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, otp, name, village, language })
+    });
+    return res.json();
+  },
+
+  logout: async () => {
+    const res = await fetch(`${API_BASE}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
     });
     return res.json();
   },
@@ -46,6 +58,7 @@ export const api = {
   voiceOnboard: async (profileData) => {
     const res = await fetch(`${API_BASE}/auth/voice-onboard`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData)
     });
@@ -53,8 +66,11 @@ export const api = {
   },
 
   getCurrentUser: async (token) => {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
+      credentials: 'include',
+      headers
     });
     return res.json();
   },
@@ -62,6 +78,7 @@ export const api = {
   linkDependent: async (data) => {
     const res = await fetch(`${API_BASE}/auth/dependents`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });

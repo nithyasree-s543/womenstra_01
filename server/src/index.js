@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import schemesRoutes from './routes/schemes.js';
@@ -33,6 +34,7 @@ const io = new Server(server, {
 // Active online users & peer signaling registry
 const onlineUsers = new Map(); // socketId -> { userId, userName, role }
 const userSocketMap = new Map(); // userId -> socketId
+const userRoomsMap = new Map(); // socketId -> Set of roomIds
 
 io.on('connection', (socket) => {
   console.log(`[Socket.IO] New client connected: ${socket.id}`);
@@ -45,6 +47,42 @@ io.on('connection', (socket) => {
     
     // Broadcast updated available tutors/mentors
     io.emit('online-users-updated', Array.from(onlineUsers.values()));
+  });
+
+  // Room-based WebRTC signaling
+  socket.on('join-room', ({ roomId = 'mentorship-live', userId, userName, role = 'learner' }) => {
+    socket.join(roomId);
+    if (!userRoomsMap.has(socket.id)) {
+      userRoomsMap.set(socket.id, new Set());
+    }
+    userRoomsMap.get(socket.id).add(roomId);
+
+    console.log(`[Socket.IO] User ${userName || socket.id} joined room: ${roomId}`);
+
+    // Get other peers in this room
+    const clientsInRoom = io.sockets.adapter.rooms.get(roomId);
+    const existingPeers = clientsInRoom 
+      ? Array.from(clientsInRoom).filter(id => id !== socket.id)
+      : [];
+
+    // Send existing peers list to the newly joined peer
+    socket.emit('room-peers', { peers: existingPeers, roomId });
+
+    // Notify existing peers that a new user has joined
+    socket.to(roomId).emit('user-joined-room', {
+      socketId: socket.id,
+      userId,
+      userName,
+      role
+    });
+  });
+
+  socket.on('leave-room', ({ roomId = 'mentorship-live' }) => {
+    socket.leave(roomId);
+    if (userRoomsMap.has(socket.id)) {
+      userRoomsMap.get(socket.id).delete(roomId);
+    }
+    socket.to(roomId).emit('user-left-room', { socketId: socket.id });
   });
 
   // Call invitation from caller to callee
@@ -85,27 +123,42 @@ io.on('connection', (socket) => {
   });
 
   // WebRTC ICE Candidates and SDP Offer/Answer relay
-  socket.on('webrtc-offer', ({ targetSocketId, offer }) => {
+  socket.on('webrtc-offer', ({ targetSocketId, offer, roomId }) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-offer-received', {
+        senderSocketId: socket.id,
+        offer
+      });
+    } else if (roomId) {
+      socket.to(roomId).emit('webrtc-offer-received', {
         senderSocketId: socket.id,
         offer
       });
     }
   });
 
-  socket.on('webrtc-answer', ({ targetSocketId, answer }) => {
+  socket.on('webrtc-answer', ({ targetSocketId, answer, roomId }) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-answer-received', {
+        senderSocketId: socket.id,
+        answer
+      });
+    } else if (roomId) {
+      socket.to(roomId).emit('webrtc-answer-received', {
         senderSocketId: socket.id,
         answer
       });
     }
   });
 
-  socket.on('webrtc-ice-candidate', ({ targetSocketId, candidate }) => {
+  socket.on('webrtc-ice-candidate', ({ targetSocketId, candidate, roomId }) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('webrtc-ice-candidate-received', {
+        senderSocketId: socket.id,
+        candidate
+      });
+    } else if (roomId) {
+      socket.to(roomId).emit('webrtc-ice-candidate-received', {
         senderSocketId: socket.id,
         candidate
       });
@@ -113,15 +166,21 @@ io.on('connection', (socket) => {
   });
 
   // End Call signal
-  socket.on('end-call', ({ targetSocketId }) => {
+  socket.on('end-call', ({ targetSocketId, roomId }) => {
     if (targetSocketId) {
       io.to(targetSocketId).emit('call-ended', { by: socket.id });
+    } else if (roomId) {
+      socket.to(roomId).emit('call-ended', { by: socket.id });
     }
   });
 
   // Hand raise signal during class
   socket.on('raise-hand', ({ userName, roomId }) => {
-    io.emit('hand-raised', { userName, timestamp: Date.now() });
+    if (roomId) {
+      io.to(roomId).emit('hand-raised', { userName, timestamp: Date.now() });
+    } else {
+      io.emit('hand-raised', { userName, timestamp: Date.now() });
+    }
   });
 
   socket.on('disconnect', () => {
@@ -130,6 +189,13 @@ io.on('connection', (socket) => {
       userSocketMap.delete(user.userId);
       onlineUsers.delete(socket.id);
       io.emit('online-users-updated', Array.from(onlineUsers.values()));
+    }
+    const rooms = userRoomsMap.get(socket.id);
+    if (rooms) {
+      rooms.forEach(roomId => {
+        socket.to(roomId).emit('user-left-room', { socketId: socket.id });
+      });
+      userRoomsMap.delete(socket.id);
     }
     console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
   });
@@ -147,6 +213,8 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
+
+app.use(cookieParser());
 
 // Rate limiting on auth routes (login + OTP)
 const authLimiter = rateLimit({

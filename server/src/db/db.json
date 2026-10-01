@@ -45,6 +45,31 @@
       "language": "hi",
       "role": "admin",
       "createdAt": "2026-10-01T05:21:48.529Z"
+    },
+    {
+      "id": "user-1790840609786",
+      "phone": "9123456789",
+      "passwordHash": "$2b$10$/LHtpUUHE.1pGUuHDTN/WOOXNlfjQRk8CkUgkgvpraeDsnZcD7FhK",
+      "name": "Rani Kumari",
+      "village": "Kashi",
+      "language": "hi",
+      "age": null,
+      "gender": "female",
+      "state": "",
+      "district": "",
+      "literacyLevel": "beginner",
+      "interests": [],
+      "goals": [],
+      "streak": 0,
+      "points": 50,
+      "badges": [
+        "Pratham Kadam"
+      ],
+      "package": "free",
+      "assignedMentorId": "mentor-1",
+      "dependentsCount": 0,
+      "role": "user",
+      "createdAt": "2026-10-01T07:43:29.786Z"
     }
   ],
   "dependents": [
@@ -695,5 +720,40 @@
       "guardianApprovalRequired": true
     }
   ],
-  "activeLocationShares": []
+  "activeLocationShares": [],
+  "userCourseProgress": [
+    {
+      "id": "prog-1",
+      "userId": "user-1",
+      "courseId": "full-stack-dev",
+      "language": "en",
+      "completedLessons": [
+        "fs-les-101"
+      ],
+      "currentLessonId": "fs-les-102",
+      "completedQuizzes": [
+        "fs-les-101"
+      ],
+      "completedTests": [],
+      "completedAssignments": [],
+      "completedProjects": [],
+      "finalAssessmentPassed": false,
+      "progressPct": 25,
+      "lastActiveAt": "2026-10-01T07:43:29.413Z"
+    }
+  ],
+  "certificates": [
+    {
+      "id": "cert-101",
+      "userId": "user-1",
+      "userName": "Sunita Devi",
+      "courseId": "digital-skills-safety",
+      "courseTitle": "Digital Literacy & Online Safety",
+      "language": "English",
+      "issueDate": "2026-09-25",
+      "verificationToken": "WOM-CERT-2026-9811",
+      "grade": "A+ Distinction",
+      "badge": "Digital Nari"
+    }
+  ]
 }
